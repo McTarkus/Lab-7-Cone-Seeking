@@ -37,6 +37,10 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     private FieldGps mFieldGPS;
     private TextView mGoalDistanceTextView;
 
+    private String HOME = "0 90 0 -90 90";
+    private String BALL_OPEN = "32 134 -87 -180 13";
+    private String BALL_FLICK = "55 134 -87 -180 13";
+
     @Override
     public void onLocationChanged(double x, double y, double heading, Location location) {
         mGPSCounter++;
@@ -115,9 +119,8 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                 mGoalDistanceTextView.setText("" + (int) getDistanceToGoal());
                 if (getDistanceToGoal() <= 20) {
                     setState(State.BALL_REMOVAL_SCRIPT);
-                }
-                else {
-                    mTargetHeadingTextView.setText( Math.round(NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)) + "°");
+                } else {
+                    mTargetHeadingTextView.setText(Math.round(NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)) + "°");
                     double leftTurnAmount = Math.round(NavUtils.getLeftTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
                     double rightTurnAmount = Math.round(NavUtils.getRightTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
                     if (NavUtils.targetIsOnLeft(mCurrentGPSX, mCurrentGPSY, mCurrentHeading, mTargetX, mTargetY)) {
@@ -142,6 +145,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
 
 
     }
+
     private long getStateTimeMS() {
         return System.currentTimeMillis() - mStateStartTime;
     }
@@ -167,20 +171,47 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                 //done in loop function
                 break;
             case BALL_REMOVAL_SCRIPT:
-                //TODO: Figure out ball removal script
+                /** RECORD OF ARM SCRIPTS FROM APP
+                 *
+                 * Remove Ball 1
+                 *  position: HOME
+                 *  delay 2000
+                 *  position: 32 134 -87 -180 13
+                 *  delay 2000
+                 *  position: 55 134 -87 -180 13
+                 *  delay 1500
+                 *  position home
+                 *
+                 */
+
+                sendCommand("ATTACH 111111");
+                sendCommand("POSITION " + HOME);
                 mCommandHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        setState(mState.READY_FOR_MISSION);
-                        mTargetXYTextView.setText("---");
-                        mGPSCounter = 0;
-                        mGPSTextView.setText("---");
-                        mTargetHeadingTextView.setText("---");
-                        mTurnAmountTextView.setText("---");
-                        mCommandTextView.setText("---");
-                        mGoalDistanceTextView.setText("---");
+                        sendCommand("POSITION" + BALL_OPEN);
                     }
-                }, 3000);
+                }, 2000);
+                mCommandHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendCommand("POSITION" + BALL_FLICK);
+                    }
+                }, 2000);
+                mCommandHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendCommand("POSITION " + HOME);
+                    }
+                }, 1500);
+                setState(mState.READY_FOR_MISSION);
+                mTargetXYTextView.setText("---");
+                mGPSCounter = 0;
+                mGPSTextView.setText("---");
+                mTargetHeadingTextView.setText("---");
+                mTurnAmountTextView.setText("---");
+                mCommandTextView.setText("---");
+                mGoalDistanceTextView.setText("---");
                 break;
         }
 
@@ -209,7 +240,6 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     }
 
 
-
     private void updateTargetXY(int x, int y) {
         mTargetX = x;
         mTargetY = y;
@@ -223,11 +253,13 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         mFieldGPS.requestLocationUpdates(this);
     }
 
-    public void handleSetOrigin(View view){
+    public void handleSetOrigin(View view) {
         mFieldGPS.setCurrentLocationAsOrigin();
     }
 
     public void handleSetXAxis(View view) {
         mFieldGPS.setCurrentLocationAsLocationOnXAxis();
     }
+
+
 }
