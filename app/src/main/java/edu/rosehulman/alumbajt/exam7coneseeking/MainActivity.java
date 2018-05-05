@@ -35,6 +35,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
 
     private int DEFAULT_TURN = 255;
     private FieldGps mFieldGPS;
+    private TextView mGoalDistanceTextView;
 
     @Override
     public void onLocationChanged(double x, double y, double heading, Location location) {
@@ -71,6 +72,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         mTargetHeadingTextView = findViewById(R.id.targetHeadingTextView);
         mTurnAmountTextView = findViewById(R.id.turnAmountTextView);
         mCommandTextView = findViewById(R.id.commandTextView);
+        mGoalDistanceTextView = findViewById(R.id.goalDistanceTextView);
         mFieldGPS = new FieldGps(this);
     }
 
@@ -104,13 +106,13 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
 
         int leftSpeed;
         int rightSpeed;
-
         switch (mState) {
             case READY_FOR_MISSION:
                 break;
             case INITIAL_STRAIGHT:
                 break;
             case GPS_SEEKING:
+                mGoalDistanceTextView.setText("" + (int) getDistanceToGoal());
                 if (getDistanceToGoal() <= 20) {
                     setState(State.BALL_REMOVAL_SCRIPT);
                 }
@@ -135,8 +137,9 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         }
     }
 
-    private long getDistanceToGoal() {
-        return (long) Math.sqrt(Math.pow(mTargetX - mCurrentGPSX, 2) + Math.pow(mTargetY - mCurrentGPSX, 2));
+    private double getDistanceToGoal() {
+        return NavUtils.getDistance(mTargetX, mTargetY, mCurrentGPSX, mCurrentGPSY);
+
 
     }
     private long getStateTimeMS() {
@@ -160,7 +163,6 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                 }, 4000);
                 break;
             case GPS_SEEKING:
-
                 updateTargetXY(90, -50);
                 //done in loop function
                 break;
@@ -176,6 +178,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                         mTargetHeadingTextView.setText("---");
                         mTurnAmountTextView.setText("---");
                         mCommandTextView.setText("---");
+                        mGoalDistanceTextView.setText("---");
                     }
                 }, 3000);
                 break;
@@ -189,11 +192,11 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
 //        Toast.makeText(this, "You pressed RESET", Toast.LENGTH_SHORT).show();
         setState(State.READY_FOR_MISSION);
         mTargetXYTextView.setText("---");
-        mGPSCounter = 0;
         mGPSTextView.setText("---");
         mTargetHeadingTextView.setText("---");
         mTurnAmountTextView.setText("---");
         mCommandTextView.setText("---");
+        mGoalDistanceTextView.setText("---");
     }
 
 
