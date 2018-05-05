@@ -3,6 +3,7 @@ package edu.rosehulman.alumbajt.exam7coneseeking;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.view.View;
 import android.widget.TextView;
 
@@ -10,6 +11,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import edu.rosehulman.me435.AccessoryActivity;
+import edu.rosehulman.me435.FieldGps;
 import edu.rosehulman.me435.FieldGpsListener;
 import edu.rosehulman.me435.NavUtils;
 
@@ -17,7 +19,6 @@ import edu.rosehulman.me435.NavUtils;
 public class MainActivity extends AccessoryActivity implements FieldGpsListener {
 
     private TextView mHighLevelStateTextView;
-    private TextView mMissionSubStateTextView;
     private TextView mGPSTextView;
     private TextView mTargetXYTextView;
     private TextView mTurnAmountTextView;
@@ -33,6 +34,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     private double mTargetY;
 
     private int DEFAULT_TURN = 255;
+    private FieldGps mFieldGPS;
 
     @Override
     public void onLocationChanged(double x, double y, double heading, Location location) {
@@ -69,6 +71,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         mTargetHeadingTextView = findViewById(R.id.targetHeadingTextView);
         mTurnAmountTextView = findViewById(R.id.turnAmountTextView);
         mCommandTextView = findViewById(R.id.commandTextView);
+        mFieldGPS = new FieldGps(this);
     }
 
     @Override
@@ -85,6 +88,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                 });
             }
         }, 0, LOOP_INTERVAL_MS);
+        mFieldGPS.requestLocationUpdates(this);
     }
 
     @Override
@@ -92,6 +96,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         super.onStop();
         mTimer.cancel();
         mTimer = null;
+        mFieldGPS.removeUpdates();
     }
 
     public void loop() {
@@ -106,28 +111,34 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
             case INITIAL_STRAIGHT:
                 break;
             case GPS_SEEKING:
-                double leftTurnAmount = Math.round(NavUtils.getLeftTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
-                double rightTurnAmount = Math.round(NavUtils.getRightTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
-                if (NavUtils.targetIsOnLeft(mCurrentGPSX, mCurrentGPSY, mCurrentHeading, mTargetX, mTargetY)) {
-                    mTurnAmountTextView.setText("Left " + (int) leftTurnAmount + "°");
-                    leftSpeed = DEFAULT_TURN - (int) leftTurnAmount;
-                    rightSpeed = DEFAULT_TURN;
-                } else {
-                    mTurnAmountTextView.setText("Right " + (int) rightTurnAmount + "°");
-                    leftSpeed = DEFAULT_TURN;
-                    rightSpeed = DEFAULT_TURN - (int) rightTurnAmount;
+                if (getDistanceToGoal() <= 20) {
+                    setState(State.BALL_REMOVAL_SCRIPT);
                 }
-                mCommandTextView.setText("WHEEL SPEED FORWARD " + leftSpeed + " FORWARD " + rightSpeed);
+                else {
+                    mTargetHeadingTextView.setText( Math.round(NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)) + "°");
+                    double leftTurnAmount = Math.round(NavUtils.getLeftTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
+                    double rightTurnAmount = Math.round(NavUtils.getRightTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
+                    if (NavUtils.targetIsOnLeft(mCurrentGPSX, mCurrentGPSY, mCurrentHeading, mTargetX, mTargetY)) {
+                        mTurnAmountTextView.setText("Left " + (int) leftTurnAmount + "°");
+                        leftSpeed = DEFAULT_TURN - (int) leftTurnAmount;
+                        rightSpeed = DEFAULT_TURN;
+                    } else {
+                        mTurnAmountTextView.setText("Right " + (int) rightTurnAmount + "°");
+                        leftSpeed = DEFAULT_TURN;
+                        rightSpeed = DEFAULT_TURN - (int) rightTurnAmount;
+                    }
+                    mCommandTextView.setText("WHEEL SPEED FORWARD " + leftSpeed + " FORWARD " + rightSpeed);
+                }
                 break;
             case BALL_REMOVAL_SCRIPT:
-                //TODO: Figure out ball removal script
                 break;
         }
-
-
     }
 
+    private long getDistanceToGoal() {
+        return (long) Math.sqrt(Math.pow(mTargetX - mCurrentGPSX, 2) + Math.pow(mTargetY - mCurrentGPSX, 2));
 
+    }
     private long getStateTimeMS() {
         return System.currentTimeMillis() - mStateStartTime;
     }
@@ -140,16 +151,33 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                 break;
             case INITIAL_STRAIGHT:
                 mCommandHandler.postDelayed(new Runnable() {
+
                     @Override
                     public void run() {
                         setState(State.GPS_SEEKING);
-                        onLocationChanged(60, -25, -30, null);
+                        //TODO: running straight stuff
                     }
                 }, 4000);
                 break;
             case GPS_SEEKING:
+
+                updateTargetXY(90, -50);
+                //done in loop function
                 break;
             case BALL_REMOVAL_SCRIPT:
+                //TODO: Figure out ball removal script
+                mCommandHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        setState(mState.READY_FOR_MISSION);
+                        mTargetXYTextView.setText("---");
+                        mGPSCounter = 0;
+                        mGPSTextView.setText("---");
+                        mTargetHeadingTextView.setText("---");
+                        mTurnAmountTextView.setText("---");
+                        mCommandTextView.setText("---");
+                    }
+                }, 3000);
                 break;
         }
 
@@ -178,18 +206,6 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     }
 
 
-    public void handleMissionComplete(View view) {
-//        Toast.makeText(this, "You pressed MISSION COMPLETE", Toast.LENGTH_SHORT).show();
-        if (mState == State.GPS_SEEKING) {
-            setState(mState.READY_FOR_MISSION);
-            mTargetXYTextView.setText("---");
-            mGPSCounter = 0;
-            mGPSTextView.setText("---");
-            mTargetHeadingTextView.setText("---");
-            mTurnAmountTextView.setText("---");
-            mCommandTextView.setText("---");
-        }
-    }
 
     private void updateTargetXY(int x, int y) {
         mTargetX = x;
@@ -198,4 +214,17 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
 
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        mFieldGPS.requestLocationUpdates(this);
+    }
+
+    public void handleSetOrigin(View view){
+        mFieldGPS.setCurrentLocationAsOrigin();
+    }
+
+    public void handleSetXAxis(View view) {
+        mFieldGPS.setCurrentLocationAsLocationOnXAxis();
+    }
 }
