@@ -119,20 +119,33 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                 mGoalDistanceTextView.setText("" + (int) getDistanceToGoal());
                 if (getDistanceToGoal() <= 20) {
                     setState(State.BALL_REMOVAL_SCRIPT);
+                    sendCommand("WHEEL SPEED BRAKE 0 BRAKE 0");
                 } else {
                     mTargetHeadingTextView.setText(Math.round(NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)) + "°");
                     double leftTurnAmount = Math.round(NavUtils.getLeftTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
                     double rightTurnAmount = Math.round(NavUtils.getRightTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
+
                     if (NavUtils.targetIsOnLeft(mCurrentGPSX, mCurrentGPSY, mCurrentHeading, mTargetX, mTargetY)) {
                         mTurnAmountTextView.setText("Left " + (int) leftTurnAmount + "°");
-                        leftSpeed = DEFAULT_TURN - (int) leftTurnAmount;
-                        rightSpeed = DEFAULT_TURN;
+                        if (leftTurnAmount < 45) {
+                            leftSpeed = DEFAULT_TURN;
+                            rightSpeed = DEFAULT_TURN;
+                        } else {
+                            leftSpeed = DEFAULT_TURN - (int) leftTurnAmount;
+                            rightSpeed = DEFAULT_TURN;
+                        }
                     } else {
                         mTurnAmountTextView.setText("Right " + (int) rightTurnAmount + "°");
-                        leftSpeed = DEFAULT_TURN;
-                        rightSpeed = DEFAULT_TURN - (int) rightTurnAmount;
+                        if (rightTurnAmount < 45) {
+                            leftSpeed = DEFAULT_TURN;
+                            rightSpeed = DEFAULT_TURN;
+                        } else {
+                            leftSpeed = DEFAULT_TURN;
+                            rightSpeed = DEFAULT_TURN - (int) rightTurnAmount;
+                        }
                     }
                     mCommandTextView.setText("WHEEL SPEED FORWARD " + leftSpeed + " FORWARD " + rightSpeed);
+                    sendCommand("WHEEL SPEED FORWARD " + leftSpeed + " FORWARD " + rightSpeed);
                 }
                 break;
             case BALL_REMOVAL_SCRIPT:
