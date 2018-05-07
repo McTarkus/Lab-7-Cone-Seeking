@@ -39,7 +39,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener,
     private double mTargetX;
     private double mTargetY;
 
-    private int DEFAULT_TURN = 155;
+    private int DEFAULT_TURN = 180;
     private FieldGps mFieldGPS;
     private TextView mGoalDistanceTextView;
 
