@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.ViewFlipper;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -13,10 +15,12 @@ import java.util.TimerTask;
 import edu.rosehulman.me435.AccessoryActivity;
 import edu.rosehulman.me435.FieldGps;
 import edu.rosehulman.me435.FieldGpsListener;
+import edu.rosehulman.me435.FieldOrientation;
+import edu.rosehulman.me435.FieldOrientationListener;
 import edu.rosehulman.me435.NavUtils;
 
 
-public class MainActivity extends AccessoryActivity implements FieldGpsListener {
+public class MainActivity extends AccessoryActivity implements FieldGpsListener, FieldOrientationListener {
 
     private TextView mHighLevelStateTextView;
     private TextView mGPSTextView;
@@ -24,6 +28,8 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     private TextView mTurnAmountTextView;
     private TextView mCommandTextView;
     private TextView mTargetHeadingTextView;
+
+    private ViewFlipper mViewFlipper;
 
     private long mStateStartTime;
     private int mGPSCounter = 0;
@@ -33,9 +39,28 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     private double mTargetX;
     private double mTargetY;
 
-    private int DEFAULT_TURN = 255;
+    private int DEFAULT_TURN = 155;
     private FieldGps mFieldGPS;
     private TextView mGoalDistanceTextView;
+
+    private TextView mBall1Text, mBall2Text, mBall3Text;
+    private double sensorHeading;
+    private FieldOrientation mFieldOrientation;
+
+    public void swapCallback(View view) {
+        mViewFlipper.showNext();
+    }
+
+    @Override
+    public void onSensorChanged(double fieldHeading, float[] orientationValues) {
+        sensorHeading = fieldHeading;
+    }
+
+    public enum Color {White, Black, Blue, Red, Green, Yellow, None}
+
+    public Color ball1Color = Color.None;
+    public Color ball2Color = Color.None;
+    public Color ball3Color = Color.None;
 
     private String HOME = "0 90 0 -90 90";
     private String BALL_OPEN = "32 134 -87 -180 13";
@@ -44,10 +69,10 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     @Override
     public void onLocationChanged(double x, double y, double heading, Location location) {
         mGPSCounter++;
-        mGPSTextView.setText("( " + (int) x + ", " + (int) y + ") " + (int) heading + "° " + mGPSCounter);
+        mGPSTextView.setText("( " + (int) x + ", " + (int) y + ") " + (int) sensorHeading + "° " + mGPSCounter);
         mCurrentGPSX = x;
         mCurrentGPSY = y;
-        mCurrentHeading = heading;
+        mCurrentHeading = sensorHeading;
     }
 
 
@@ -69,15 +94,20 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setState(State.READY_FOR_MISSION);
-
+        mBall1Text = (TextView) findViewById(R.id.ball1color);
+        mBall2Text = (TextView) findViewById(R.id.ball2color);
+        mBall3Text = (TextView) findViewById(R.id.ball3color);
         mHighLevelStateTextView = findViewById(R.id.highLevelSubstateTextView);
         mGPSTextView = findViewById(R.id.gPSTextView);
         mTargetXYTextView = findViewById(R.id.targetXYTextView);
         mTargetHeadingTextView = findViewById(R.id.targetHeadingTextView);
         mTurnAmountTextView = findViewById(R.id.turnAmountTextView);
         mCommandTextView = findViewById(R.id.commandTextView);
+        mViewFlipper = findViewById(R.id.viewFlipper);
         mGoalDistanceTextView = findViewById(R.id.goalDistanceTextView);
         mFieldGPS = new FieldGps(this);
+        mFieldOrientation = new FieldOrientation(this);
+        sendCommand("ATTACH 111111");
     }
 
     @Override
@@ -95,6 +125,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
             }
         }, 0, LOOP_INTERVAL_MS);
         mFieldGPS.requestLocationUpdates(this);
+        mFieldOrientation.registerListener(this);
     }
 
     @Override
@@ -103,6 +134,76 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         mTimer.cancel();
         mTimer = null;
         mFieldGPS.removeUpdates();
+        mFieldOrientation.unregisterListener();
+    }
+
+    protected void onCommandReceived(String receivedCommand) {
+        super.onCommandReceived(receivedCommand);
+        Toast.makeText(this, "Recieved", Toast.LENGTH_SHORT).show();
+        if (receivedCommand.equals("1_W")) {
+            mBall1Text.setText("        White");
+            ball1Color = Color.White;
+        } else if (receivedCommand.equals("1_K")) {
+            mBall1Text.setText("       Black");
+            ball1Color = Color.Black;
+        } else if (receivedCommand.equals("1_Y")) {
+            mBall1Text.setText("         Yellow");
+            ball1Color = Color.Yellow;
+        } else if (receivedCommand.equals("1_B")) {
+            mBall1Text.setText("          Blue");
+            ball1Color = Color.Blue;
+        } else if (receivedCommand.equals("1_R")) {
+            mBall1Text.setText("          Red");
+            ball1Color = Color.Red;
+        } else if (receivedCommand.equals("1_G")) {
+            mBall1Text.setText("        Green");
+            ball1Color = Color.Green;
+        } else if (receivedCommand.equals("2_W")) {
+            mBall2Text.setText("         White");
+            ball2Color = Color.White;
+        } else if (receivedCommand.equals("2_K")) {
+            mBall2Text.setText("         Black");
+            ball2Color = Color.Black;
+        } else if (receivedCommand.equals("2_Y")) {
+            mBall2Text.setText("          Yellow");
+            ball2Color = Color.Yellow;
+        } else if (receivedCommand.equals("2_B")) {
+            mBall2Text.setText("          Blue");
+            ball2Color = Color.Blue;
+        } else if (receivedCommand.equals("2_R")) {
+            mBall2Text.setText("          Red");
+            ball2Color = Color.Red;
+        } else if (receivedCommand.equals("2_G")) {
+            mBall2Text.setText("         Green");
+            ball2Color = Color.Green;
+        } else if (receivedCommand.equals("2_B")) {
+            mBall2Text.setText("          Blue");
+            ball2Color = Color.Blue;
+        } else if (receivedCommand.equals("2_R")) {
+            mBall2Text.setText("          Red");
+            ball2Color = Color.Red;
+        } else if (receivedCommand.equals("2_G")) {
+            mBall2Text.setText("         Green");
+            ball2Color = Color.Green;
+        } else if (receivedCommand.equals("3_W")) {
+            mBall3Text.setText("White");
+            ball3Color = Color.White;
+        } else if (receivedCommand.equals("3_K")) {
+            mBall3Text.setText("Black");
+            ball3Color = Color.Black;
+        } else if (receivedCommand.equals("3_Y")) {
+            mBall3Text.setText("Yellow");
+            ball3Color = Color.Yellow;
+        } else if (receivedCommand.equals("3_B")) {
+            mBall3Text.setText("Blue");
+            ball3Color = Color.Blue;
+        } else if (receivedCommand.equals("3_R")) {
+            mBall3Text.setText("Red");
+            ball3Color = Color.Red;
+        } else if (receivedCommand.equals("3_G")) {
+            mBall3Text.setText("Green");
+            ball3Color = Color.Green;
+        }
     }
 
     public void loop() {
@@ -120,6 +221,8 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                 if (getDistanceToGoal() <= 20) {
                     setState(State.BALL_REMOVAL_SCRIPT);
                     sendCommand("WHEEL SPEED BRAKE 0 BRAKE 0");
+
+                    mCommandTextView.setText("WHEEL SPEED BRAKE 0 BRAKE 0");
                 } else {
                     mTargetHeadingTextView.setText(Math.round(NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)) + "°");
                     double leftTurnAmount = Math.round(NavUtils.getLeftTurnHeadingDelta(mCurrentHeading, NavUtils.getTargetHeading(mCurrentGPSX, mCurrentGPSY, mTargetX, mTargetY)));
@@ -131,7 +234,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                             leftSpeed = DEFAULT_TURN;
                             rightSpeed = DEFAULT_TURN;
                         } else {
-                            leftSpeed = DEFAULT_TURN - (int) leftTurnAmount;
+                            leftSpeed = DEFAULT_TURN - (int) leftTurnAmount * 2;
                             rightSpeed = DEFAULT_TURN;
                         }
                     } else {
@@ -141,7 +244,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                             rightSpeed = DEFAULT_TURN;
                         } else {
                             leftSpeed = DEFAULT_TURN;
-                            rightSpeed = DEFAULT_TURN - (int) rightTurnAmount;
+                            rightSpeed = DEFAULT_TURN - (int) rightTurnAmount * 2;
                         }
                     }
                     mCommandTextView.setText("WHEEL SPEED FORWARD " + leftSpeed + " FORWARD " + rightSpeed);
@@ -153,11 +256,11 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         }
     }
 
+
     private double getDistanceToGoal() {
         return NavUtils.getDistance(mTargetX, mTargetY, mCurrentGPSX, mCurrentGPSY);
-
-
     }
+
 
     private long getStateTimeMS() {
         return System.currentTimeMillis() - mStateStartTime;
@@ -178,6 +281,8 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                         //TODO: running straight stuff
                     }
                 }, 4000);
+                sendCommand("ATTACH 111111");
+                mCommandTextView.setText("ATTACH 111111");
                 break;
             case GPS_SEEKING:
                 updateTargetXY(90, -50);
@@ -196,27 +301,41 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
                  *  position home
                  *
                  */
-
-                sendCommand("ATTACH 111111");
-                sendCommand("POSITION " + HOME);
                 mCommandHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        sendCommand("POSITION" + BALL_OPEN);
+                        sendCommand("ATTACH 111111");
+                        mCommandTextView.setText("ATTACH 111111");
                     }
-                }, 2000);
-                mCommandHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        sendCommand("POSITION" + BALL_FLICK);
-                    }
-                }, 2000);
+                }, 1000);
                 mCommandHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         sendCommand("POSITION " + HOME);
+                        mCommandTextView.setText("POSITION " + HOME);
                     }
-                }, 1500);
+                }, 2000);
+                mCommandHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendCommand("POSITION " + BALL_OPEN);
+                        mCommandTextView.setText("POSITION " + BALL_OPEN);
+                    }
+                }, 4000);
+                mCommandHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendCommand("POSITION " + BALL_FLICK);
+                        mCommandTextView.setText("POSITION " + BALL_FLICK);
+                    }
+                }, 6000);
+                mCommandHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendCommand("POSITION " + HOME);
+                        mCommandTextView.setText("POSITION " + HOME);
+                    }
+                }, 7500);
                 setState(mState.READY_FOR_MISSION);
                 mTargetXYTextView.setText("---");
                 mGPSCounter = 0;
@@ -235,6 +354,8 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
     public void handleReset(View view) {
 //        Toast.makeText(this, "You pressed RESET", Toast.LENGTH_SHORT).show();
         setState(State.READY_FOR_MISSION);
+        sendCommand("POSITION " + HOME);sendCommand("WHEEL SPEED BRAKE 0 BRAKE 0");
+        mCommandTextView.setText("WHEEL SPEED BRAKE 0 BRAKE 0");
         mTargetXYTextView.setText("---");
         mGPSTextView.setText("---");
         mTargetHeadingTextView.setText("---");
@@ -248,6 +369,7 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
 //        Toast.makeText(this, "You pressed GO", Toast.LENGTH_SHORT).show();
         if (mState == State.READY_FOR_MISSION) {
             setState(State.INITIAL_STRAIGHT);
+//            setState(State.BALL_REMOVAL_SCRIPT);
             updateTargetXY(90, -50);
         }
     }
@@ -274,5 +396,159 @@ public class MainActivity extends AccessoryActivity implements FieldGpsListener 
         mFieldGPS.setCurrentLocationAsLocationOnXAxis();
     }
 
+    public void clearCallback(View view) {
+        none1Callback(view);
+        none2Callback(view);
+        none3Callback(view);
+    }
 
+    public void testCallback(View view) {
+        sendCommand("CUSTOM Perform ball test");
+    }
+
+    public void none1Callback(View view) {
+        mBall1Text.setText("          ---");
+        ball1Color = Color.None;
+    }
+
+    public void none2Callback(View view) {
+        mBall2Text.setText("           ---");
+        ball2Color = Color.None;
+    }
+
+    public void none3Callback(View view) {
+        mBall3Text.setText("---");
+        ball3Color = Color.None;
+    }
+
+    public void white1Callback(View view) {
+        mBall1Text.setText("        White");
+        ball1Color = Color.White;
+    }
+
+    public void white2Callback(View view) {
+        mBall2Text.setText("         White");
+        ball2Color = Color.White;
+    }
+
+    public void white3Callback(View view) {
+        mBall3Text.setText("White");
+        ball3Color = Color.White;
+    }
+
+    public void black1Callback(View view) {
+        mBall1Text.setText("        Black");
+        ball1Color = Color.Black;
+    }
+
+    public void black2Callback(View view) {
+        mBall2Text.setText("         Black");
+        ball3Color = Color.Black;
+    }
+
+    public void black3Callback(View view) {
+        mBall3Text.setText("Black");
+        ball3Color = Color.Black;
+    }
+
+    public void green1Callback(View view) {
+        mBall1Text.setText("        Green");
+        ball1Color = Color.Green;
+    }
+
+    public void green2Callback(View view) {
+        mBall2Text.setText("         Green");
+        ball2Color = Color.Green;
+    }
+
+    public void green3Callback(View view) {
+        mBall3Text.setText("Green");
+        ball3Color = Color.Green;
+    }
+
+    public void yellow1Callback(View view) {
+        mBall1Text.setText("         Yellow");
+        ball1Color = Color.Yellow;
+    }
+
+    public void yellow2Callback(View view) {
+        mBall2Text.setText("          Yellow");
+        ball2Color = Color.Yellow;
+    }
+
+    public void yellow3Callback(View view) {
+        mBall3Text.setText("Yellow");
+        ball3Color = Color.Yellow;
+    }
+
+    public void red1Callback(View view) {
+        mBall1Text.setText("         Red");
+        ball1Color = Color.Red;
+    }
+
+    public void red2Callback(View view) {
+        mBall2Text.setText("          Red");
+        ball2Color = Color.Red;
+    }
+
+    public void red3Callback(View view) {
+        mBall3Text.setText("Red");
+        ball3Color = Color.Red;
+    }
+
+    public void blue1Callback(View view) {
+        mBall1Text.setText("         Blue");
+        ball1Color = Color.Blue;
+    }
+
+    public void blue2Callback(View view) {
+        mBall2Text.setText("          Blue");
+        ball2Color = Color.Blue;
+    }
+
+    public void blue3Callback(View view) {
+        mBall3Text.setText("Blue");
+        ball3Color = Color.Blue;
+    }
+
+    public void goCallback(View view) {
+        if (ball1Color == Color.Yellow || ball1Color == Color.Blue) {
+            Toast.makeText(this, "Removing Ball 1...", Toast.LENGTH_SHORT).show();
+            none1Callback(view);
+        } else if (ball2Color == Color.Yellow || ball2Color == Color.Blue) {
+            Toast.makeText(this, "Removing Ball 2...", Toast.LENGTH_SHORT).show();
+            none2Callback(view);
+        } else if (ball3Color == Color.Yellow || ball3Color == Color.Blue) {
+            Toast.makeText(this, "Removing Ball 3...", Toast.LENGTH_SHORT).show();
+            none3Callback(view);
+        }
+        //Drive forward for 1 second
+        if (ball1Color == Color.White) {
+            Toast.makeText(this, "Removing Ball 1...", Toast.LENGTH_SHORT).show();
+            none1Callback(view);
+        } else if (ball2Color == Color.White) {
+            Toast.makeText(this, "Removing Ball 2...", Toast.LENGTH_SHORT).show();
+            none2Callback(view);
+        } else if (ball3Color == Color.White) {
+            Toast.makeText(this, "Removing Ball 3...", Toast.LENGTH_SHORT).show();
+            none3Callback(view);
+        }
+        //Drive forward for 1 second
+        if (ball1Color == Color.Red || ball1Color == Color.Green) {
+            Toast.makeText(this, "Removing Ball 1...", Toast.LENGTH_SHORT).show();
+            none1Callback(view);
+        } else if (ball2Color == Color.Red || ball2Color == Color.Green) {
+            Toast.makeText(this, "Removing Ball 2...", Toast.LENGTH_SHORT).show();
+            none2Callback(view);
+        } else if (ball3Color == Color.Red || ball3Color == Color.Green) {
+            Toast.makeText(this, "Removing Ball 3...", Toast.LENGTH_SHORT).show();
+            none3Callback(view);
+        }
+        //Drive backward for 2 second
+    }
+
+    public void handleSetHeadingTo0(View view) {
+        mFieldOrientation.setCurrentFieldHeading(0);
+    }
 }
+

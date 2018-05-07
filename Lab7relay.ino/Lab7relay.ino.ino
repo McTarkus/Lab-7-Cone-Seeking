@@ -9,12 +9,12 @@
 
 GolfBallStand stand;
 
-#define TEAM_NUMBER 4  // Replace this with your team number.
+#define TEAM_NUMBER 1  // Replace this with your team number.
 
 int ballColor_1, ballColor_2, ballColor_3;
 
 char manufacturer[] = "Rose-Hulman";
-char model[] = "Lab 6 Ball Sorting";  // Change to your app name.
+char model[] = "Lab7relay";  // Change to your app name.
 char versionStr[] = "1.0";
         
 // Only Manufacturer, Model, and Version matter to Android
@@ -82,7 +82,7 @@ void setup() {
   wildThumperCom.registerWheelCurrentReplyCallback(wheelCurrentReplyFromThumper);
   
   lcd.clear();
-  lcd.print("Relay Station");
+  lcd.print("Relay Station:\n ball tester");
   delay(1500);
   acc.powerOn();
 }
